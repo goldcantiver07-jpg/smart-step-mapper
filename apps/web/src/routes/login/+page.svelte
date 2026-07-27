@@ -6,10 +6,41 @@
 
   let email = $state("");
   let password = $state("");
-  let error = $state("");
+  let formError = $state("");
+  let emailError = $state("");
+  let passwordError = $state("");
   let emailFocused = $state(false);
   let passwordFocused = $state(false);
+  let emailTouched = $state(false);
+  let passwordTouched = $state(false);
   let showPassword = $state(false);
+
+  // Validation helpers
+  function getEmailError(): string {
+    if (!email) return "Email is required";
+    if (!isEmailValid(email)) return "Enter a valid email address";
+    return "";
+  }
+
+  function getPasswordError(): string {
+    if (!password) return "Password is required";
+    return "";
+  }
+
+  // Per-field errors from server response
+  function handleServerError(message: string) {
+    formError = "";
+    emailError = "";
+    passwordError = "";
+
+    if (message.includes("No account found")) {
+      emailError = message;
+    } else if (message.includes("Incorrect password")) {
+      passwordError = message;
+    } else {
+      formError = message;
+    }
+  }
 
   const loginMutation = createMutation(
     () =>
@@ -19,19 +50,47 @@
           goto("/");
         },
         onError: (err) => {
-          error = err.message;
+          handleServerError(err.message);
         },
       }),
   );
 
   function handleSubmit(e: Event) {
     e.preventDefault();
-    error = "";
-    if (!isEmailValid(email)) {
-      error = "Enter a valid email.";
+    formError = "";
+    emailError = "";
+    passwordError = "";
+    emailTouched = true;
+    passwordTouched = true;
+
+    const emailErr = getEmailError();
+    if (emailErr) {
+      emailError = emailErr;
       return;
     }
+
     loginMutation.mutate({ email, password });
+  }
+
+  function handleEmailBlur() {
+    emailTouched = true;
+    emailError = getEmailError();
+  }
+
+  function handlePasswordBlur() {
+    passwordTouched = true;
+    passwordError = getPasswordError();
+  }
+
+  // Clear field error on input
+  function handleEmailInput() {
+    emailError = "";
+    formError = "";
+  }
+
+  function handlePasswordInput() {
+    passwordError = "";
+    formError = "";
   }
 </script>
 
@@ -40,55 +99,25 @@
 </svelte:head>
 
 <!-- Background -->
-<div
-  class="fixed inset-0 -z-10 overflow-hidden"
-  aria-hidden="true"
->
-  <div
-    class="animate-gradient absolute -left-[10%] -top-[20%] h-[60%] w-[50%] rounded-full bg-gradient-to-br from-brand-500/20 via-brand-600/10 to-transparent blur-[120px]"
-  />
-  <div
-    class="absolute -bottom-[15%] -right-[10%] h-[50%] w-[40%] rounded-full bg-gradient-to-tl from-violet-500/15 via-purple-600/10 to-transparent blur-[100px]"
-  />
-  <div
-    class="absolute left-[30%] top-[40%] h-[30%] w-[30%] rounded-full bg-gradient-to-r from-cyan-500/10 to-blue-600/10 blur-[80px]"
-  />
+<div class="fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+  <div class="animate-gradient absolute -left-[10%] -top-[20%] h-[60%] w-[50%] rounded-full bg-gradient-to-br from-brand-500/20 via-brand-600/10 to-transparent blur-[120px]" />
+  <div class="absolute -bottom-[15%] -right-[10%] h-[50%] w-[40%] rounded-full bg-gradient-to-tl from-violet-500/15 via-purple-600/10 to-transparent blur-[100px]" />
+  <div class="absolute left-[30%] top-[40%] h-[30%] w-[30%] rounded-full bg-gradient-to-r from-cyan-500/10 to-blue-600/10 blur-[80px]" />
   <!-- Grain overlay -->
-  <div
-    class="absolute inset-0 opacity-[0.03]"
-    style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJmIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgbnVtT2N0YXZlcz0iMyIgc3R5bGU9ImZsb2NvbG9yOiB3aGl0ZTtjb2xvcjogd2hpdGUiLz48ZmVTY29yZWxpZ2h0aW5nIHJlc3VsdD0ic3R1ZmYiLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjZikiLz48L3N2Zz4=');"
-  />
+  <div class="absolute inset-0 opacity-[0.03]" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJmIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgbnVtT2N0YXZlcz0iMyIgc3R5bGU9ImZsb2NvbG9yOiB3aGl0ZTtjb2xvcjogd2hpdGUiLz48ZmVTY29yZWxpZ2h0aW5nIHJlc3VsdD0ic3R1ZmYiLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjZikiLz48L3N2Zz4=')" />
 </div>
 
 <div class="flex min-h-svh">
   <!-- Left: Brand Section (hidden on mobile) -->
   <div class="relative hidden w-1/2 flex-col items-center justify-center overflow-hidden bg-surface-950/50 p-12 lg:flex">
-    <!-- Floating decorative orbs -->
-    <div
-      class="animate-float absolute left-[15%] top-[20%] h-24 w-24 rounded-full border border-brand-400/20 bg-brand-400/5"
-    />
-    <div
-      class="animate-float absolute bottom-[25%] left-[25%] h-16 w-16 rounded-full border border-violet-400/20 bg-violet-400/5"
-      style="animation-delay: -2s"
-    />
-    <div
-      class="animate-float absolute right-[20%] top-[35%] h-20 w-20 rounded-full border border-cyan-400/20 bg-cyan-400/5"
-      style="animation-delay: -4s"
-    />
+    <div class="animate-float absolute left-[15%] top-[20%] h-24 w-24 rounded-full border border-brand-400/20 bg-brand-400/5" />
+    <div class="animate-float absolute bottom-[25%] left-[25%] h-16 w-16 rounded-full border border-violet-400/20 bg-violet-400/5" style="animation-delay: -2s" />
+    <div class="animate-float absolute right-[20%] top-[35%] h-20 w-20 rounded-full border border-cyan-400/20 bg-cyan-400/5" style="animation-delay: -4s" />
 
-    <!-- Brand content -->
     <div class="animate-fade-in-up stagger-1 relative z-10 text-center">
       <div class="mb-6 inline-flex items-center justify-center">
         <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 shadow-lg shadow-brand-500/25">
-          <svg
-            class="h-8 w-8 text-white"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
+          <svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 20V10" />
             <path d="M18 20V4" />
             <path d="M6 20v-4" />
@@ -104,7 +133,6 @@
       </p>
     </div>
 
-    <!-- Feature list -->
     <div class="animate-fade-in-up stagger-3 mt-12 space-y-4">
       <div class="flex items-center gap-3">
         <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500/10">
@@ -133,7 +161,6 @@
       </div>
     </div>
 
-    <!-- Bottom decorative line -->
     <div class="animate-fade-in-up stagger-4 absolute bottom-12 left-12 right-12">
       <div class="h-px bg-gradient-to-r from-transparent via-brand-500/30 to-transparent" />
     </div>
@@ -143,10 +170,7 @@
   <div class="flex w-full items-center justify-center p-4 lg:w-1/2">
     <div class="animate-scale-in stagger-2 w-full max-w-sm">
       <!-- Glassmorphism card -->
-      <div
-        class="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-surface-900/80 p-8 shadow-2xl shadow-black/40 backdrop-blur-xl"
-      >
-        <!-- Subtle card top border gradient -->
+      <div class="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-surface-900/80 p-8 shadow-2xl shadow-black/40 backdrop-blur-xl">
         <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
         <!-- Mobile brand mark -->
@@ -166,70 +190,83 @@
         <h2 class="font-display text-2xl font-bold text-white">Welcome back</h2>
         <p class="mt-1.5 text-sm text-surface-400">Enter your credentials to continue</p>
 
-        <!-- Error message -->
-        {#if error}
-          <div
-            class="mt-5 animate-fade-in-up rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400"
-            role="alert"
-          >
-            <div class="flex items-center gap-2">
-              <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <span>{error}</span>
+        <!-- General error message (mounted always for layout stability) -->
+        <div
+          class="mt-5 min-h-[2.5rem]"
+          class:pointer-events-none={!formError}
+          role="alert"
+          aria-live="polite"
+        >
+          {#if formError}
+            <div class="animate-fade-in-up rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-sm text-red-400">
+              <div class="flex items-center gap-2">
+                <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span>{formError}</span>
+              </div>
             </div>
-          </div>
-        {/if}
+          {/if}
+        </div>
 
-        <form onsubmit={handleSubmit} class="mt-6 space-y-4">
+        <form onsubmit={handleSubmit} class="mt-2 space-y-5" novalidate>
           <!-- Email input -->
           <div class="relative">
             <input
               bind:value={email}
+              oninput={handleEmailInput}
               onfocus={() => (emailFocused = true)}
-              onblur={() => (emailFocused = false)}
+              onblur={handleEmailBlur}
               type="email"
               id="email"
               autocomplete="email"
               required
-              class="peer w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 pb-2 pt-7 text-sm text-white outline-none transition-all duration-200 placeholder:text-transparent focus:border-brand-500/50 focus:bg-brand-500/[0.04] focus:shadow-[0_0_0_1px_rgba(12,142,233,0.2)]"
+              aria-invalid={emailError ? "true" : "false"}
+              aria-describedby={emailError ? "email-error" : undefined}
+              class="peer w-full rounded-xl border bg-white/[0.04] px-4 pb-2 pt-7 text-sm text-white outline-none transition-all duration-200 placeholder:text-transparent focus:shadow-[0_0_0_1px] {emailError ? 'border-red-500/50 bg-red-500/[0.04] focus:border-red-500/60 focus:shadow-red-500/20' : 'border-white/[0.08] focus:border-brand-500/50 focus:bg-brand-500/[0.04] focus:shadow-brand-500/20'}"
               placeholder="you@example.com"
+              class:animate-[shake_0.4s_ease-in-out]={emailError && emailTouched}
             />
             <label
               for="email"
-              class="pointer-events-none absolute left-4 top-2 text-xs font-medium text-surface-500 transition-all duration-200 peer-focus:text-brand-400 {emailFocused || email
-                ? 'text-brand-400'
-                : ''}"
+              class="pointer-events-none absolute left-4 top-2 text-xs font-medium transition-all duration-200 {emailError ? 'text-red-400' : emailFocused || email ? 'text-brand-400' : 'text-surface-500'}"
             >
               Email address
             </label>
-            <div class="pointer-events-none absolute inset-x-0 bottom-0 h-px scale-x-0 rounded-full bg-gradient-to-r from-brand-500 to-cyan-400 transition-transform duration-300 peer-focus:scale-x-100" />
+            <div class="pointer-events-none absolute inset-x-0 bottom-0 h-px scale-x-0 rounded-full bg-gradient-to-r transition-transform duration-300 peer-focus:scale-x-100 {emailError ? 'from-red-500 to-red-400' : 'from-brand-500 to-cyan-400'}" />
+            {#if emailError && emailTouched}
+              <p id="email-error" class="mt-1.5 animate-fade-in-up text-xs text-red-400" role="alert">
+                {emailError}
+              </p>
+            {/if}
           </div>
 
           <!-- Password input -->
           <div class="relative">
             <input
               bind:value={password}
+              oninput={handlePasswordInput}
               onfocus={() => (passwordFocused = true)}
-              onblur={() => (passwordFocused = false)}
+              onblur={handlePasswordBlur}
               type={showPassword ? "text" : "password"}
               id="password"
               autocomplete="current-password"
               required
-              class="peer w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 pb-2 pt-7 text-sm text-white outline-none transition-all duration-200 placeholder:text-transparent focus:border-brand-500/50 focus:bg-brand-500/[0.04] focus:shadow-[0_0_0_1px_rgba(12,142,233,0.2)]"
+              aria-invalid={passwordError ? "true" : "false"}
+              aria-describedby={passwordError ? "password-error" : undefined}
+              class="peer w-full rounded-xl border bg-white/[0.04] px-4 pb-2 pt-7 text-sm text-white outline-none transition-all duration-200 placeholder:text-transparent focus:shadow-[0_0_0_1px] {passwordError ? 'border-red-500/50 bg-red-500/[0.04] focus:border-red-500/60 focus:shadow-red-500/20' : 'border-white/[0.08] focus:border-brand-500/50 focus:bg-brand-500/[0.04] focus:shadow-brand-500/20'}"
               placeholder="••••••••"
+              class:animate-[shake_0.4s_ease-in-out]={passwordError && passwordTouched}
             />
             <label
               for="password"
-              class="pointer-events-none absolute left-4 top-2 text-xs font-medium text-surface-500 transition-all duration-200 peer-focus:text-brand-400 {passwordFocused || password
-                ? 'text-brand-400'
-                : ''}"
+              class="pointer-events-none absolute left-4 top-2 text-xs font-medium transition-all duration-200 {passwordError ? 'text-red-400' : passwordFocused || password ? 'text-brand-400' : 'text-surface-500'}"
             >
               Password
             </label>
-            <div class="pointer-events-none absolute inset-x-0 bottom-0 h-px scale-x-0 rounded-full bg-gradient-to-r from-brand-500 to-cyan-400 transition-transform duration-300 peer-focus:scale-x-100" />
+            <div class="pointer-events-none absolute inset-x-0 bottom-0 h-px scale-x-0 rounded-full bg-gradient-to-r transition-transform duration-300 peer-focus:scale-x-100 {passwordError ? 'from-red-500 to-red-400' : 'from-brand-500 to-cyan-400'}" />
             <!-- Toggle visibility -->
             <button
               type="button"
@@ -250,6 +287,18 @@
                   <circle cx="12" cy="12" r="3" />
                 </svg>
               {/if}
+            </button>
+            {#if passwordError && passwordTouched}
+              <p id="password-error" class="mt-1.5 animate-fade-in-up text-xs text-red-400" role="alert">
+                {passwordError}
+              </p>
+            {/if}
+          </div>
+
+          <!-- Forgot password hint -->
+          <div class="flex justify-end">
+            <button type="button" class="text-xs text-surface-500 transition-colors hover:text-brand-400">
+              Forgot password?
             </button>
           </div>
 
@@ -281,19 +330,23 @@
 
         <p class="text-center text-sm text-surface-400">
           Don't have an account?
-          <a
-            href="/register"
-            class="font-medium text-brand-400 transition-colors hover:text-brand-300"
-          >
+          <a href="/register" class="font-medium text-brand-400 transition-colors hover:text-brand-300">
             Create one
           </a>
         </p>
       </div>
 
-      <!-- Help text -->
       <p class="mt-4 text-center text-xs text-surface-600">
         Protected by end-to-end encryption &bull; We never share your data
       </p>
     </div>
   </div>
 </div>
+
+<style>
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+    20%, 40%, 60%, 80% { transform: translateX(3px); }
+  }
+</style>

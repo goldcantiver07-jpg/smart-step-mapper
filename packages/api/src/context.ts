@@ -7,8 +7,16 @@ export type CreateContextOptions = {
   headers: Headers;
 };
 
+function getClientIp(headers: Headers): string {
+  return (
+    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headers.get("x-real-ip") ??
+    "127.0.0.1"
+  );
+}
+
 export async function createContext(options: CreateContextOptions) {
-  let user: { id: string; email: string; displayName: string } | null = null;
+  let user: { id: string; email: string; displayName: string; createdAt: Date } | null = null;
 
   const cookieHeader = options.headers.get("cookie") ?? "";
   const tokenMatch = cookieHeader.match(/session=([^;]+)/);
@@ -18,7 +26,7 @@ export async function createContext(options: CreateContextOptions) {
     try {
       const payload = await verifyToken(token);
       const [found] = await db
-        .select({ id: users.id, email: users.email, displayName: users.displayName })
+        .select({ id: users.id, email: users.email, displayName: users.displayName, createdAt: users.createdAt })
         .from(users)
         .where(eq(users.id, payload.userId))
         .limit(1);
@@ -28,7 +36,9 @@ export async function createContext(options: CreateContextOptions) {
     }
   }
 
-  return { user };
+  const clientIp = getClientIp(options.headers);
+
+  return { user, clientIp };
 }
 
 export type Context = Awaited<ReturnType<typeof createContext>>;

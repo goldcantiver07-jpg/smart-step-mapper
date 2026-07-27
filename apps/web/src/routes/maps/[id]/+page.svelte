@@ -154,6 +154,7 @@
 
 {:else}
   {@const map = mapQuery.data}
+  <div class="flex h-[calc(100svh-3.5rem)] flex-col">
 
   <!-- ===== TOP BAR ===== -->
   <header class="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-white/[0.06] bg-surface-950/80 px-4 backdrop-blur-xl">
@@ -229,10 +230,10 @@
   </header>
 
   <!-- ===== MAIN THREE-PANEL LAYOUT ===== -->
-  <div class="flex flex-1">
+  <div class="flex flex-1 min-h-0">
     <!-- ─── LEFT SIDEBAR: Map Details ─── -->
     <aside
-      class="animate-scale-in stagger-1 w-72 shrink-0 overflow-y-auto border-r border-white/[0.06] bg-surface-950/50 transition-all duration-300 max-md:fixed max-md:inset-y-14 max-md:left-0 max-md:z-20 max-md:w-80 max-md:border-r max-md:bg-surface-900/95 max-md:backdrop-blur-xl {sidebarOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'} {sidebarOpen ? '' : 'hidden md:hidden'}"
+      class="w-72 lg:w-80 xl:w-96 2xl:w-[22%] 2xl:min-w-96 2xl:max-w-md shrink-0 overflow-y-auto border-r border-white/[0.06] bg-surface-950/50 transition-all duration-300 max-md:fixed max-md:inset-y-14 max-md:left-0 max-md:z-20 max-md:w-80 max-md:border-r max-md:bg-surface-900/95 max-md:backdrop-blur-xl {sidebarOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'} {sidebarOpen ? '' : 'hidden md:hidden'}"
     >
       <div class="p-4">
         <div class="mb-5 flex items-center gap-2">
@@ -584,7 +585,7 @@
 
     <!-- ─── RIGHT PANEL: AI Tutor Chat ─── -->
     <aside
-      class="animate-scale-in stagger-2 flex w-72 shrink-0 flex-col overflow-hidden border-l border-white/[0.06] bg-surface-950/50 transition-all duration-300 max-md:fixed max-md:inset-y-14 max-md:right-0 max-md:z-20 max-md:w-80 max-md:border-l max-md:bg-surface-900/95 max-md:backdrop-blur-xl {aiPanelOpen ? 'max-md:translate-x-0' : 'max-md:translate-x-full'} {aiPanelOpen ? '' : 'hidden md:hidden'}"
+      class="flex w-72 lg:w-80 xl:w-96 2xl:w-[22%] 2xl:min-w-96 2xl:max-w-md shrink-0 flex-col overflow-hidden border-l border-white/[0.06] bg-surface-950/50 transition-all duration-300 max-md:fixed max-md:inset-y-14 max-md:right-0 max-md:z-20 max-md:w-80 max-md:border-l max-md:bg-surface-900/95 max-md:backdrop-blur-xl {aiPanelOpen ? 'max-md:translate-x-0' : 'max-md:translate-x-full'} {aiPanelOpen ? '' : 'hidden md:hidden'}"
     >
       <div class="flex-1 overflow-y-auto p-4">
         <AIChatPanel
@@ -594,5 +595,6 @@
         />
       </div>
     </aside>
+  </div>
   </div>
 {/if}
