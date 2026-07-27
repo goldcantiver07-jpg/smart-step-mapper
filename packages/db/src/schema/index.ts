@@ -13,5 +13,3 @@ export type { Step, NewStep } from "./steps";
 export { progress } from "./progress";
 export type { Progress, NewProgress } from "./progress";
 
-export { rateLimits } from "./rate-limits";
-export type { RateLimit, NewRateLimit } from "./rate-limits";

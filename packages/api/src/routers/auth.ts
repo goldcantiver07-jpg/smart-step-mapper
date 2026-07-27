@@ -6,7 +6,6 @@ import { users } from "@smart-step-mapper/db/schema";
 import { eq } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "../utils/password";
 import { signToken } from "../utils/jwt";
-import { checkRateLimit } from "../utils/rate-limiter";
 
 export const authRouter = {
   register: publicProcedure
@@ -18,8 +17,7 @@ export const authRouter = {
       }),
     )
     .handler(async ({ input, context }) => {
-      await checkRateLimit("register", context.clientIp);
-      const [existing] = await db
+const [existing] = await db
         .select({ id: users.id })
         .from(users)
         .where(eq(users.email, input.email))
@@ -52,8 +50,7 @@ export const authRouter = {
       }),
     )
     .handler(async ({ input, context }) => {
-      await checkRateLimit("login", context.clientIp);
-      const [found] = await db
+const [found] = await db
         .select()
         .from(users)
         .where(eq(users.email, input.email))

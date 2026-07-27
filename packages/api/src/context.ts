@@ -7,14 +7,6 @@ export type CreateContextOptions = {
   headers: Headers;
 };
 
-function getClientIp(headers: Headers): string {
-  return (
-    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    headers.get("x-real-ip") ??
-    "127.0.0.1"
-  );
-}
-
 export async function createContext(options: CreateContextOptions) {
   let user: { id: string; email: string; displayName: string; createdAt: Date } | null = null;
 
@@ -36,9 +28,7 @@ export async function createContext(options: CreateContextOptions) {
     }
   }
 
-  const clientIp = getClientIp(options.headers);
-
-  return { user, clientIp };
+  return { user };
 }
 
 export type Context = Awaited<ReturnType<typeof createContext>>;
