@@ -156,6 +156,42 @@ export const mapsRouter = {
       return verification;
     }),
 
+  update: publicProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        title: z.string().optional(),
+        problemStatement: z.string().optional(),
+        formula: z.string().optional(),
+        variables: z.string().optional(),
+        status: z.string().optional(),
+      }),
+    )
+    .handler(async ({ input, context }) => {
+      if (!context.user) throw new Error("Not authenticated");
+      const [existing] = await db
+        .select({ userId: maps.userId })
+        .from(maps)
+        .where(eq(maps.id, input.id))
+        .limit(1);
+      if (!existing) throw new Error("Map not found");
+      if (existing.userId !== context.user.id) throw new Error("Forbidden");
+
+      const updateData: Record<string, string> = {};
+      if (input.title !== undefined) updateData.title = input.title;
+      if (input.problemStatement !== undefined) updateData.problemStatement = input.problemStatement;
+      if (input.formula !== undefined) updateData.formula = input.formula;
+      if (input.variables !== undefined) updateData.variables = input.variables;
+      if (input.status !== undefined) updateData.status = input.status;
+
+      const [updated] = await db
+        .update(maps)
+        .set(updateData)
+        .where(eq(maps.id, input.id))
+        .returning();
+      return updated;
+    }),
+
   delete: publicProcedure
     .input(z.object({ id: z.string().uuid() }))
     .handler(async ({ input, context }) => {
