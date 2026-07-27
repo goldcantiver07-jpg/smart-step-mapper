@@ -7,10 +7,13 @@ import { createContext } from "@smart-step-mapper/api/context";
 import { appRouter } from "@smart-step-mapper/api/routers/index";
 import type { RequestHandler } from "@sveltejs/kit";
 
+const isExpectedError = (error: Error) =>
+  error.message === "Not authenticated";
+
 const rpcHandler = new RPCHandler(appRouter, {
   interceptors: [
-    onError((error) => {
-      console.error(error);
+    onError((error: unknown) => {
+      if (error instanceof Error && !isExpectedError(error)) console.error(error);
     }),
   ],
 });
@@ -22,8 +25,8 @@ const apiHandler = new OpenAPIHandler(appRouter, {
     }),
   ],
   interceptors: [
-    onError((error) => {
-      console.error(error);
+    onError((error: unknown) => {
+      if (error instanceof Error && !isExpectedError(error)) console.error(error);
     }),
   ],
 });
