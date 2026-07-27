@@ -1,0 +1,3 @@
+{
+  "extends": "@smart-step-mapper/config/tsconfig.base.json"
+}

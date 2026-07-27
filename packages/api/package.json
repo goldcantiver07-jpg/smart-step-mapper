@@ -1,0 +1,27 @@
+{
+  "name": "@smart-step-mapper/api",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@orpc/client": "catalog:",
+    "@orpc/openapi": "catalog:",
+    "@orpc/server": "catalog:",
+    "@orpc/zod": "catalog:",
+    "@smart-step-mapper/db": "workspace:*",
+    "@smart-step-mapper/env": "workspace:*",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@smart-step-mapper/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
