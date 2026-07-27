@@ -29,6 +29,7 @@
     "hooks:setup": "vp config",
     "dev:web": "vp run --filter web dev",
     "db:push": "vp run --filter @smart-step-mapper/db db:push",
+    "db:seed": "bun run packages/db/scripts/seed-topics.ts",
     "db:studio": "vp run --filter @smart-step-mapper/db db:studio",
     "db:generate": "vp run --filter @smart-step-mapper/db db:generate",
     "db:migrate": "vp run --filter @smart-step-mapper/db db:migrate",
@@ -41,9 +42,11 @@
     "deploy:check": "vercel deploy --dry"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "@smart-step-mapper/env": "workspace:*",
     "bcryptjs": "^3.0.3",
     "dotenv": "catalog:",
+    "drizzle-orm": "^0.45.2",
     "jose": "^6.2.4",
     "zod": "catalog:"
   },
