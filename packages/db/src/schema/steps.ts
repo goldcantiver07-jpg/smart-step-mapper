@@ -10,6 +10,7 @@ export const steps = pgTable("steps", {
   result: text("result").notNull().default(""),
   isCorrect: text("is_correct").notNull().default("unchecked"),
   feedback: text("feedback").notNull().default(""),
+  suggestedStep: text("suggested_step").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
