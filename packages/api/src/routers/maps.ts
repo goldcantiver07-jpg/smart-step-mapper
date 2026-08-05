@@ -4,6 +4,7 @@ import { db } from "@smart-step-mapper/db";
 import { maps, steps, topics } from "@smart-step-mapper/db/schema";
 import { eq, desc, asc, getTableColumns } from "drizzle-orm";
 import { verifyStepResult } from "../utils/adaptive-engine";
+import { verifyStepWithAI } from "../utils/verify-step";
 
 export const mapsRouter = {
   create: publicProcedure
@@ -156,6 +157,76 @@ export const mapsRouter = {
           .where(eq(steps.id, input.stepId));
       }
       return verification;
+    }),
+
+  verifyNewStep: publicProcedure
+    .input(
+      z.object({
+        stepId: z.string().uuid(),
+        mode: z.enum(["auto", "alternative"]).optional().default("auto"),
+      }),
+    )
+    .handler(async ({ input, context }) => {
+      if (!context.user) throw new Error("Not authenticated");
+
+      const [step] = await db.select().from(steps).where(eq(steps.id, input.stepId)).limit(1);
+      if (!step) throw new Error("Step not found");
+
+      const [map] = await db
+        .select({ ...getTableColumns(maps), topicName: topics.name })
+        .from(maps)
+        .innerJoin(topics, eq(maps.topicId, topics.id))
+        .where(eq(maps.id, step.mapId))
+        .limit(1);
+      if (!map) throw new Error("Map not found");
+      if (map.userId !== context.user.id) throw new Error("Forbidden");
+
+      const mapSteps = await db
+        .select()
+        .from(steps)
+        .where(eq(steps.mapId, step.mapId))
+        .orderBy(asc(steps.stepNumber));
+
+      const verification = await verifyStepWithAI(
+        {
+          title: map.title,
+          topicName: map.topicName,
+          problemStatement: map.problemStatement,
+          formula: map.formula || undefined,
+          variables: map.variables || undefined,
+          steps: mapSteps.map((s) => ({
+            stepNumber: s.stepNumber,
+            explanation: s.explanation,
+            mathExpression: s.mathExpression,
+            result: s.result,
+            isCorrect: s.isCorrect,
+            feedback: s.feedback,
+          })),
+        },
+        step.stepNumber,
+        input.mode,
+      );
+
+      const verifiedAt = new Date().toISOString();
+      if (verification.unavailable) {
+        return { isCorrect: false, feedback: "", suggestedStep: null, unavailable: true, verifiedAt };
+      }
+
+      await db
+        .update(steps)
+        .set({
+          isCorrect: verification.isCorrect ? "correct" : "incorrect",
+          feedback: verification.feedback,
+          suggestedStep: verification.suggestedStep ? JSON.stringify(verification.suggestedStep) : "",
+        })
+        .where(eq(steps.id, step.id));
+
+      return {
+        isCorrect: verification.isCorrect,
+        feedback: verification.feedback,
+        suggestedStep: verification.suggestedStep,
+        verifiedAt,
+      };
     }),
 
   update: publicProcedure
