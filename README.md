@@ -34,6 +34,12 @@ This project uses PostgreSQL with Drizzle ORM.
 bun run db:push
 ```
 
+4. Seed the topics (required — the topic picker on the create-map page reads from this table):
+
+```bash
+bun run db:seed
+```
+
 Then, run the development server:
 
 ```bash
