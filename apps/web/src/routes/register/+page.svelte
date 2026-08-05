@@ -3,11 +3,14 @@
   import { orpc } from "$lib/orpc";
   import { isEmailValid, isPasswordValid, isDisplayNameValid } from "$lib/validation";
   import { goto } from "$app/navigation";
+  import ErrorPopup from "$lib/components/ErrorPopup.svelte";
+  import { getAuthErrorMessage, getErrorCode, getErrorMessage } from "$lib/errors";
 
   let email = $state("");
   let password = $state("");
   let displayName = $state("");
   let formError = $state("");
+  let popupMessage = $state("");
   let emailError = $state("");
   let passwordError = $state("");
   let nameError = $state("");
@@ -39,17 +42,30 @@
     return "";
   }
 
-  function handleServerError(message: string) {
+  // Known server messages map to their field; unexpected failures get a clear popup
+  function handleServerError(err: unknown) {
     formError = "";
     emailError = "";
     passwordError = "";
     nameError = "";
+    popupMessage = "";
+
+    const message = getErrorMessage(err);
 
     if (message.includes("already registered")) {
       emailError = message;
-    } else {
-      formError = message;
+      return;
     }
+
+    // Server rejected the input — show a friendly inline message
+    const code = getErrorCode(err);
+    if (code === "BAD_REQUEST" || code === "UNPROCESSABLE_CONTENT") {
+      formError = getAuthErrorMessage(err);
+      return;
+    }
+
+    // Unexpected failure ("Internal server error", network, …) → descriptive popup
+    popupMessage = getAuthErrorMessage(err);
   }
 
   const registerMutation = createMutation(
@@ -60,7 +76,7 @@
           goto("/");
         },
         onError: (err) => {
-          handleServerError(err.message);
+          handleServerError(err);
         },
       }),
   );
@@ -68,6 +84,7 @@
   function handleSubmit(e: Event) {
     e.preventDefault();
     formError = "";
+    popupMessage = "";
     emailError = "";
     passwordError = "";
     nameError = "";
@@ -102,9 +119,9 @@
     passwordError = getPasswordError();
   }
 
-  function handleNameInput() { nameError = ""; formError = ""; }
-  function handleEmailInput() { emailError = ""; formError = ""; }
-  function handlePasswordInput() { passwordError = ""; formError = ""; }
+  function handleNameInput() { nameError = ""; formError = ""; popupMessage = ""; }
+  function handleEmailInput() { emailError = ""; formError = ""; popupMessage = ""; }
+  function handlePasswordInput() { passwordError = ""; formError = ""; popupMessage = ""; }
 
   // Password strength indicator
   const passwordStrength = $derived.by(() => {
@@ -387,6 +404,12 @@
     </div>
   </div>
 </div>
+
+<ErrorPopup
+  message={popupMessage}
+  title="Couldn't create your account"
+  ondismiss={() => (popupMessage = "")}
+/>
 
 <style>
   @keyframes shake {

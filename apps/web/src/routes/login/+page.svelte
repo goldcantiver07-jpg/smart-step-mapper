@@ -3,10 +3,13 @@
   import { createMutation } from "@tanstack/svelte-query";
   import { isEmailValid } from "$lib/validation";
   import { goto } from "$app/navigation";
+  import ErrorPopup from "$lib/components/ErrorPopup.svelte";
+  import { getAuthErrorMessage, getErrorCode, getErrorMessage } from "$lib/errors";
 
   let email = $state("");
   let password = $state("");
   let formError = $state("");
+  let popupMessage = $state("");
   let emailError = $state("");
   let passwordError = $state("");
   let emailFocused = $state(false);
@@ -27,19 +30,33 @@
     return "";
   }
 
-  // Per-field errors from server response
-  function handleServerError(message: string) {
+  // Known server messages map to their field; unexpected failures get a clear popup
+  function handleServerError(err: unknown) {
     formError = "";
     emailError = "";
     passwordError = "";
+    popupMessage = "";
+
+    const message = getErrorMessage(err);
 
     if (message.includes("No account found")) {
       emailError = message;
-    } else if (message.includes("Incorrect password")) {
-      passwordError = message;
-    } else {
-      formError = message;
+      return;
     }
+    if (message.includes("Incorrect password")) {
+      passwordError = message;
+      return;
+    }
+
+    // Server rejected the input — show a friendly inline message
+    const code = getErrorCode(err);
+    if (code === "BAD_REQUEST" || code === "UNPROCESSABLE_CONTENT") {
+      formError = getAuthErrorMessage(err);
+      return;
+    }
+
+    // Unexpected failure ("Internal server error", network, …) → descriptive popup
+    popupMessage = getAuthErrorMessage(err);
   }
 
   const loginMutation = createMutation(
@@ -50,7 +67,7 @@
           goto("/");
         },
         onError: (err) => {
-          handleServerError(err.message);
+          handleServerError(err);
         },
       }),
   );
@@ -58,6 +75,7 @@
   function handleSubmit(e: Event) {
     e.preventDefault();
     formError = "";
+    popupMessage = "";
     emailError = "";
     passwordError = "";
     emailTouched = true;
@@ -86,11 +104,13 @@
   function handleEmailInput() {
     emailError = "";
     formError = "";
+    popupMessage = "";
   }
 
   function handlePasswordInput() {
     passwordError = "";
     formError = "";
+    popupMessage = "";
   }
 </script>
 
@@ -342,6 +362,12 @@
     </div>
   </div>
 </div>
+
+<ErrorPopup
+  message={popupMessage}
+  title="Couldn't sign you in"
+  ondismiss={() => (popupMessage = "")}
+/>
 
 <style>
   @keyframes shake {
