@@ -19,6 +19,50 @@ export type MapContext = {
   }>;
 };
 
+export type GroqCallOptions = {
+  temperature?: number;
+  maxTokens?: number;
+  timeoutMs?: number;
+};
+
+export async function callGroq(messages: ChatMessage[], options: GroqCallOptions = {}): Promise<string> {
+  const { temperature = 0.7, maxTokens = 1024, timeoutMs } = options;
+
+  const { env } = await import("@smart-step-mapper/env/server");
+
+  const controller = timeoutMs ? new AbortController() : undefined;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
+
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+      }),
+      signal: controller?.signal,
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Groq API error (${response.status}): ${errorBody}`);
+    }
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    return (data.choices?.[0]?.message?.content ?? "").trim();
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function sendChatMessage(
   messages: ChatMessage[],
   mapContext: MapContext,
@@ -30,29 +74,7 @@ export async function sendChatMessage(
     ...messages,
   ];
 
-  const { env } = await import("@smart-step-mapper/env/server");
-
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages: allMessages,
-      temperature: 0.7,
-      max_tokens: 1024,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Groq API error (${response.status}): ${errorBody}`);
-  }
-
-  const data = await response.json();
-  return (data.choices?.[0]?.message?.content ?? "").trim();
+  return callGroq(allMessages);
 }
 
 export function buildSystemPrompt(mapContext: MapContext): string {
