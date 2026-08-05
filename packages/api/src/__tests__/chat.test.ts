@@ -22,6 +22,11 @@ describe("chat utility", () => {
     expect(prompt).toContain("x = (-b ± √(b² - 4ac)) / 2a");
   });
 
+  it("buildSystemPrompt includes the topic when provided", () => {
+    const prompt = buildSystemPrompt({ ...basicMap, topicName: "Quadratic Equations" });
+    expect(prompt).toContain("Quadratic Equations");
+  });
+
   it("buildSystemPrompt indicates no steps when empty", () => {
     const prompt = buildSystemPrompt(basicMap);
     expect(prompt).toContain("No steps have been added yet");

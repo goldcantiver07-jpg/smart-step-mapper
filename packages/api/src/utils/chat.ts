@@ -5,6 +5,7 @@ export type ChatMessage = {
 
 export type MapContext = {
   title: string;
+  topicName?: string;
   problemStatement: string;
   formula?: string;
   variables?: string;
@@ -74,6 +75,7 @@ export function buildSystemPrompt(mapContext: MapContext): string {
 
 ## Current Problem Context
 **Title:** ${mapContext.title || "Untitled"}
+${mapContext.topicName ? `**Topic:** ${mapContext.topicName}` : ""}
 **Problem Statement:** ${mapContext.problemStatement}
 ${mapContext.formula ? `**Formula:** ${mapContext.formula}` : ""}
 ${mapContext.variables ? `**Variables:** ${mapContext.variables}` : ""}
@@ -85,6 +87,7 @@ ${stepsSummary || "No steps have been added yet."}
 - Help the student understand the problem and work through it step by step.
 - Provide hints and guidance without giving away the answer directly.
 - Explain mathematical concepts related to the problem.
+- Tailor explanations, terminology, and examples to the problem's topic${mapContext.topicName ? ` (${mapContext.topicName})` : ""}.
 - Suggest strategies for breaking down the problem.
 - Point out potential pitfalls or common mistakes.
 - Be encouraging and supportive.

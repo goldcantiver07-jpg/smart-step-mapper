@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { publicProcedure } from "../index";
 import { db } from "@smart-step-mapper/db";
-import { maps, steps } from "@smart-step-mapper/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { maps, steps, topics } from "@smart-step-mapper/db/schema";
+import { eq, asc, getTableColumns } from "drizzle-orm";
 import { sendChatMessage } from "../utils/chat";
 
 export const chatRouter = {
@@ -21,10 +21,11 @@ export const chatRouter = {
     .handler(async ({ input, context }) => {
       if (!context.user) throw new Error("Not authenticated");
 
-      // Fetch the map to verify ownership and get context
+      // Fetch the map (with its topic name) to verify ownership and get context
       const [map] = await db
-        .select()
+        .select({ ...getTableColumns(maps), topicName: topics.name })
         .from(maps)
+        .innerJoin(topics, eq(maps.topicId, topics.id))
         .where(eq(maps.id, input.mapId))
         .limit(1);
 
@@ -41,6 +42,7 @@ export const chatRouter = {
       // Call Groq with map context
       const response = await sendChatMessage(input.messages, {
         title: map.title,
+        topicName: map.topicName,
         problemStatement: map.problemStatement,
         formula: map.formula || undefined,
         variables: map.variables || undefined,

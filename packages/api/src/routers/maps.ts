@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { publicProcedure } from "../index";
 import { db } from "@smart-step-mapper/db";
-import { maps, steps } from "@smart-step-mapper/db/schema";
-import { eq, desc, asc } from "drizzle-orm";
+import { maps, steps, topics } from "@smart-step-mapper/db/schema";
+import { eq, desc, asc, getTableColumns } from "drizzle-orm";
 import { verifyStepResult } from "../utils/adaptive-engine";
 
 export const mapsRouter = {
@@ -35,8 +35,9 @@ export const mapsRouter = {
   list: publicProcedure.handler(async ({ context }) => {
     if (!context.user) throw new Error("Not authenticated");
     return db
-      .select()
+      .select({ ...getTableColumns(maps), topicName: topics.name })
       .from(maps)
+      .innerJoin(topics, eq(maps.topicId, topics.id))
       .where(eq(maps.userId, context.user.id))
       .orderBy(desc(maps.updatedAt));
   }),
@@ -46,8 +47,9 @@ export const mapsRouter = {
     .handler(async ({ input, context }) => {
       if (!context.user) throw new Error("Not authenticated");
       const [map] = await db
-        .select()
+        .select({ ...getTableColumns(maps), topicName: topics.name })
         .from(maps)
+        .innerJoin(topics, eq(maps.topicId, topics.id))
         .where(eq(maps.id, input.id))
         .limit(1);
       if (!map) throw new Error("Map not found");
@@ -160,6 +162,7 @@ export const mapsRouter = {
     .input(
       z.object({
         id: z.string().uuid(),
+        topicId: z.string().uuid().optional(),
         title: z.string().optional(),
         problemStatement: z.string().optional(),
         formula: z.string().optional(),
@@ -178,6 +181,7 @@ export const mapsRouter = {
       if (existing.userId !== context.user.id) throw new Error("Forbidden");
 
       const updateData: Record<string, string> = {};
+      if (input.topicId !== undefined) updateData.topicId = input.topicId;
       if (input.title !== undefined) updateData.title = input.title;
       if (input.problemStatement !== undefined) updateData.problemStatement = input.problemStatement;
       if (input.formula !== undefined) updateData.formula = input.formula;
