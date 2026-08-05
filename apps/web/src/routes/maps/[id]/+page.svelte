@@ -18,6 +18,7 @@
   }));
   const addStepMutation = createMutation(() => orpc.maps.addStep.mutationOptions());
   const verifyMutation = createMutation(() => orpc.maps.verifyStep.mutationOptions());
+  const verifyNewStepMutation = createMutation(() => orpc.maps.verifyNewStep.mutationOptions());
 
   // ── UI State ──
   let sidebarOpen = $state(true);
@@ -41,6 +42,13 @@
   let userResult = $state("");
   let verificationResults = $state<Record<string, { isCorrect: boolean; feedback: string }>>({});
 
+  // Add-step verification state
+  let skipVerification = $state(false);
+  let verifyingSteps = $state<Record<string, boolean>>({});
+  let verificationFailed = $state<Record<string, boolean>>({});
+  let revealedSuggestions = $state<Record<string, boolean>>({});
+  let verifyingAlternative = $state<string | null>(null);
+
   // Sync edit form when map data loads (once, on initial load only)
   let initialized = $state(false);
   $effect(() => {
@@ -59,6 +67,29 @@
   const correctCount = $derived(mapQuery.data?.steps.filter((s) => s.isCorrect === "correct").length ?? 0);
   const progressPercent = $derived(totalSteps > 0 ? Math.round((correctCount / totalSteps) * 100) : 0);
 
+  // ── Step verification on add ──
+  type SuggestedStep = { explanation: string; mathExpression: string; result: string };
+
+  function parseSuggestedStep(json: string): SuggestedStep | null {
+    if (!json) return null;
+    try {
+      const parsed: unknown = JSON.parse(json);
+      if (typeof parsed !== "object" || parsed === null) return null;
+      const record = parsed as Record<string, unknown>;
+      return {
+        explanation: String(record.explanation ?? ""),
+        mathExpression: String(record.mathExpression ?? ""),
+        result: String(record.result ?? ""),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  const stepSuggestions = $derived<Record<string, SuggestedStep | null>>(
+    Object.fromEntries((mapQuery.data?.steps ?? []).map((s) => [s.id, parseSuggestedStep(s.suggestedStep)])),
+  );
+
   // ── Actions ──
   function handleSaveMap() {
     updateMapMutation.mutate({
@@ -73,7 +104,7 @@
 
   async function handleAddStep() {
     if (!stepExplanation && !stepMathExpr && !stepResult) return;
-    await addStepMutation.mutateAsync({
+    const saved = await addStepMutation.mutateAsync({
       mapId,
       stepNumber: currentStepNumber,
       explanation: stepExplanation,
@@ -84,6 +115,19 @@
     stepMathExpr = "";
     stepResult = "";
     mapQuery.refetch();
+
+    if (!skipVerification) {
+      verifyingSteps[saved.id] = true;
+      try {
+        const verdict = await verifyNewStepMutation.mutateAsync({ stepId: saved.id, mode: "auto" });
+        if (verdict.unavailable) verificationFailed[saved.id] = true;
+        mapQuery.refetch();
+      } catch {
+        verificationFailed[saved.id] = true;
+      } finally {
+        verifyingSteps[saved.id] = false;
+      }
+    }
   }
 
   async function handleVerify(stepId: string) {
@@ -101,6 +145,32 @@
 
   function handleSelectStep(index: number) {
     selectedStepIndex = selectedStepIndex === index ? undefined : index;
+  }
+
+  async function handleAlternativeVerify(stepId: string) {
+    if (verifyingAlternative !== null) return;
+    verifyingAlternative = stepId;
+    try {
+      const verdict = await verifyNewStepMutation.mutateAsync({ stepId, mode: "alternative" });
+      if (verdict.unavailable) verificationFailed[stepId] = true;
+      mapQuery.refetch();
+    } catch {
+      verificationFailed[stepId] = true;
+    } finally {
+      verifyingAlternative = null;
+    }
+  }
+
+  function handleToggleSuggestion(stepId: string) {
+    const willShow = !revealedSuggestions[stepId];
+    revealedSuggestions[stepId] = willShow;
+    if (!willShow) return;
+    const suggestion = stepSuggestions[stepId];
+    if (!suggestion) return;
+    stepExplanation = suggestion.explanation;
+    stepMathExpr = suggestion.mathExpression;
+    stepResult = suggestion.result;
+    document.getElementById("step-editor")?.scrollIntoView({ behavior: "smooth" });
   }
 
   function handleStatusChange(status: string) {
@@ -474,14 +544,23 @@
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center justify-between gap-2">
                       <h4 class="text-sm font-medium text-surface-200">Step {step.stepNumber}</h4>
-                      <span
-                        class="shrink-0 rounded-md px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider
-                          {isCorrect ? 'bg-emerald-500/15 text-emerald-400' :
-                            step.isCorrect === 'incorrect' ? 'bg-red-500/15 text-red-400' :
-                            'bg-surface-800 text-surface-500'}"
-                      >
-                        {isCorrect ? "Correct" : step.isCorrect === "incorrect" ? "Incorrect" : "Open"}
-                      </span>
+                      {#if verifyingSteps[step.id]}
+                        <span
+                          class="inline-flex shrink-0 items-center gap-1 rounded-md bg-brand-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-brand-400"
+                        >
+                          <span class="h-2.5 w-2.5 animate-spin rounded-full border border-brand-400/30 border-t-brand-400" />
+                          Verifying
+                        </span>
+                      {:else}
+                        <span
+                          class="shrink-0 rounded-md px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider
+                            {isCorrect ? 'bg-emerald-500/15 text-emerald-400' :
+                              step.isCorrect === 'incorrect' ? 'bg-red-500/15 text-red-400' :
+                              'bg-surface-800 text-surface-500'}"
+                        >
+                          {isCorrect ? "Correct" : step.isCorrect === "incorrect" ? "Incorrect" : "Open"}
+                        </span>
+                      {/if}
                     </div>
                     {#if step.explanation}
                       <p class="mt-1 text-sm leading-relaxed text-surface-400">{step.explanation}</p>
@@ -518,6 +597,50 @@
                       <div class="mb-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
                         <span class="font-medium">Feedback:</span> {step.feedback}
                       </div>
+                    {/if}
+
+                    {#if verificationFailed[step.id]}
+                      <div class="mb-3 rounded-lg bg-surface-800/60 px-3 py-2 text-xs text-surface-400">
+                        Couldn't verify this step — the checker was unavailable. It was saved without a check.
+                      </div>
+                    {/if}
+
+                    {#if step.isCorrect === "incorrect"}
+                      {@const suggestion = stepSuggestions[step.id]}
+                      <div class="mb-3 flex flex-wrap items-center gap-2">
+                        {#if suggestion}
+                          <button
+                            onclick={() => handleToggleSuggestion(step.id)}
+                            class="rounded-lg border border-brand-500/30 bg-brand-500/10 px-3 py-1.5 text-xs font-medium text-brand-300 transition-colors hover:bg-brand-500/20"
+                          >
+                            {revealedSuggestions[step.id] ? "Hide suggested step" : "Show correct step"}
+                          </button>
+                        {/if}
+                        <button
+                          onclick={() => handleAlternativeVerify(step.id)}
+                          disabled={verifyingAlternative !== null}
+                          class="rounded-lg border border-surface-700 bg-surface-800/60 px-3 py-1.5 text-xs font-medium text-surface-300 transition-colors hover:bg-surface-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {verifyingAlternative === step.id ? "Checking…" : "This is a valid alternative method"}
+                        </button>
+                      </div>
+
+                      {#if suggestion && revealedSuggestions[step.id]}
+                        <div class="mb-3 rounded-lg border border-brand-500/20 bg-brand-500/[0.04] px-3 py-2.5 text-xs text-surface-300">
+                          <p class="mb-1.5 font-medium text-brand-300">
+                            Suggested correct step — pre-filled into "New Step #{currentStepNumber}" below (editable)
+                          </p>
+                          {#if suggestion.explanation}
+                            <p class="leading-relaxed">{suggestion.explanation}</p>
+                          {/if}
+                          {#if suggestion.mathExpression}
+                            <code class="mt-1 inline-block rounded bg-surface-950 px-2 py-0.5 font-mono text-brand-300">{suggestion.mathExpression}</code>
+                          {/if}
+                          {#if suggestion.result}
+                            <p class="mt-1"><span class="text-surface-500">Result: </span><span class="font-mono text-emerald-300">{suggestion.result}</span></p>
+                          {/if}
+                        </div>
+                      {/if}
                     {/if}
 
                     {#if canVerify}
@@ -561,14 +684,23 @@
         <!-- Step Editor Form -->
         <div id="step-editor" class="mx-auto mt-8 max-w-2xl animate-fade-in-up stagger-3">
           <div class="rounded-xl border border-white/[0.08] bg-surface-900/30 p-5">
-            <div class="mb-4 flex items-center gap-2">
-              <div class="flex h-6 w-6 items-center justify-center rounded-md bg-brand-500/10">
-                <svg class="h-3.5 w-3.5 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
+            <div class="mb-4 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <div class="flex h-6 w-6 items-center justify-center rounded-md bg-brand-500/10">
+                  <svg class="h-3.5 w-3.5 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </div>
+                <h3 class="font-display text-sm font-semibold text-surface-200">New Step #{currentStepNumber}</h3>
               </div>
-              <h3 class="font-display text-sm font-semibold text-surface-200">New Step #{currentStepNumber}</h3>
+              <label
+                class="flex cursor-pointer select-none items-center gap-1.5 text-xs text-surface-400 transition-colors hover:text-surface-300"
+                title="Save this step without an AI check"
+              >
+                <input type="checkbox" bind:checked={skipVerification} class="h-3.5 w-3.5 accent-brand-500" />
+                Skip AI check
+              </label>
             </div>
 
             <div class="space-y-3">
@@ -612,6 +744,10 @@
                   Add Step
                 {/if}
               </button>
+
+              {#if skipVerification}
+                <p class="text-center text-xs text-surface-500">AI check skipped — this step will be saved unchecked.</p>
+              {/if}
             </div>
           </div>
         </div>
