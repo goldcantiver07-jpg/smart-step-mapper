@@ -259,6 +259,15 @@
                     {statusLabel(map.status)}
                   </span>
                 </div>
+                {#if map.topicName}
+                  <span class="mb-2 inline-flex items-center gap-1.5 rounded-full bg-brand-500/10 px-2 py-0.5 text-[10px] font-medium text-brand-300">
+                    <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z" />
+                      <line x1="7" y1="7" x2="7.01" y2="7" />
+                    </svg>
+                    {map.topicName}
+                  </span>
+                {/if}
                 <p class="mb-3 line-clamp-2 text-xs leading-relaxed text-surface-500">
                   {map.problemStatement}
                 </p>
@@ -279,7 +288,7 @@
         <h2 class="mb-4 font-display text-lg font-semibold text-surface-100">Quick Start</h2>
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <button
-            onclick={() => goto("/create?topic=algebra")}
+            onclick={() => goto("/create?topic=Linear%20Equations")}
             class="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-center transition-all duration-200 hover:border-orange-500/20 hover:bg-orange-500/[0.04] hover:shadow-lg hover:shadow-orange-500/5 active:scale-[0.97]"
           >
             <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10 transition-colors group-hover:bg-orange-500/20">
@@ -289,12 +298,12 @@
                 <line x1="15" y1="9" x2="9" y2="15" />
               </svg>
             </div>
-            <h3 class="text-sm font-medium text-surface-300 transition-colors group-hover:text-orange-300">Algebra</h3>
-            <p class="mt-0.5 text-[11px] text-surface-500">Equations & expressions</p>
+            <h3 class="text-sm font-medium text-surface-300 transition-colors group-hover:text-orange-300">Linear Equations</h3>
+            <p class="mt-0.5 text-[11px] text-surface-500">Solving & graphing</p>
           </button>
 
           <button
-            onclick={() => goto("/create?topic=geometry")}
+            onclick={() => goto("/create?topic=Quadratic%20Equations")}
             class="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-center transition-all duration-200 hover:border-blue-500/20 hover:bg-blue-500/[0.04] hover:shadow-lg hover:shadow-blue-500/5 active:scale-[0.97]"
           >
             <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 transition-colors group-hover:bg-blue-500/20">
@@ -302,12 +311,12 @@
                 <circle cx="12" cy="12" r="10" />
               </svg>
             </div>
-            <h3 class="text-sm font-medium text-surface-300 transition-colors group-hover:text-blue-300">Geometry</h3>
-            <p class="mt-0.5 text-[11px] text-surface-500">Shapes & angles</p>
+            <h3 class="text-sm font-medium text-surface-300 transition-colors group-hover:text-blue-300">Quadratic Equations</h3>
+            <p class="mt-0.5 text-[11px] text-surface-500">Quadratics & the formula</p>
           </button>
 
           <button
-            onclick={() => goto("/create?topic=statistics")}
+            onclick={() => goto("/create?topic=Statistics%20%26%20Probability")}
             class="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-center transition-all duration-200 hover:border-green-500/20 hover:bg-green-500/[0.04] hover:shadow-lg hover:shadow-green-500/5 active:scale-[0.97]"
           >
             <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10 transition-colors group-hover:bg-green-500/20">
@@ -316,12 +325,12 @@
                 <path d="M22 12A10 10 0 0 0 12 2v10z" />
               </svg>
             </div>
-            <h3 class="text-sm font-medium text-surface-300 transition-colors group-hover:text-green-300">Statistics</h3>
-            <p class="mt-0.5 text-[11px] text-surface-500">Data & probability</p>
+            <h3 class="text-sm font-medium text-surface-300 transition-colors group-hover:text-green-300">Statistics & Probability</h3>
+            <p class="mt-0.5 text-[11px] text-surface-500">Data analysis & probability</p>
           </button>
 
           <button
-            onclick={() => goto("/create?topic=calculus")}
+            onclick={() => goto("/create?topic=Trigonometry")}
             class="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-center transition-all duration-200 hover:border-purple-500/20 hover:bg-purple-500/[0.04] hover:shadow-lg hover:shadow-purple-500/5 active:scale-[0.97]"
           >
             <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10 transition-colors group-hover:bg-purple-500/20">
@@ -330,8 +339,8 @@
                 <path d="m19 9-5 5-4-4-3 3" />
               </svg>
             </div>
-            <h3 class="text-sm font-medium text-surface-300 transition-colors group-hover:text-purple-300">Calculus</h3>
-            <p class="mt-0.5 text-[11px] text-surface-500">Derivatives & integrals</p>
+            <h3 class="text-sm font-medium text-surface-300 transition-colors group-hover:text-purple-300">Trigonometry</h3>
+            <p class="mt-0.5 text-[11px] text-surface-500">Ratios, identities & the unit circle</p>
           </button>
         </div>
       </section>

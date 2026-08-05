@@ -11,16 +11,18 @@
     mapId,
     mapTitle,
     problemStatement,
+    topicName,
   }: {
     mapId: string;
     mapTitle: string;
     problemStatement: string;
+    topicName?: string;
   } = $props();
 
   let messages = $state<Message[]>([
     {
       role: "assistant",
-      content: `👋 I'm your AI tutor! Ask me anything about "${mapTitle || problemStatement.slice(0, 60)}". I can help you break it down, explain concepts, or give hints.`,
+      content: `👋 I'm your AI tutor! Ask me anything about "${mapTitle || problemStatement.slice(0, 60)}".${topicName ? ` I see this is a ${topicName} problem.` : ""} I can help you break it down, explain concepts, or give hints.`,
     },
   ]);
   let input = $state("");

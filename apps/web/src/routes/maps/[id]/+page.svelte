@@ -10,9 +10,12 @@
 
   // ── Queries ──
   const mapQuery = createQuery(() => orpc.maps.getById.queryOptions({ input: { id: mapId } }));
+  const topicsQuery = createQuery(() => orpc.topics.list.queryOptions());
 
   // ── Mutations ──
-  const updateMapMutation = createMutation(() => orpc.maps.update.mutationOptions());
+  const updateMapMutation = createMutation(() => orpc.maps.update.mutationOptions({
+    onSuccess: () => mapQuery.refetch(),
+  }));
   const addStepMutation = createMutation(() => orpc.maps.addStep.mutationOptions());
   const verifyMutation = createMutation(() => orpc.maps.verifyStep.mutationOptions());
 
@@ -23,6 +26,7 @@
 
   // Map edit form state
   let editTitle = $state("");
+  let editTopicId = $state("");
   let editProblem = $state("");
   let editFormula = $state("");
   let editVariables = $state("");
@@ -42,6 +46,7 @@
   $effect(() => {
     if (!initialized && mapQuery.data) {
       editTitle = mapQuery.data.title;
+      editTopicId = mapQuery.data.topicId;
       editProblem = mapQuery.data.problemStatement;
       editFormula = mapQuery.data.formula ?? "";
       editVariables = mapQuery.data.variables ?? "";
@@ -58,6 +63,7 @@
   function handleSaveMap() {
     updateMapMutation.mutate({
       id: mapId,
+      topicId: editTopicId,
       title: editTitle,
       problemStatement: editProblem,
       formula: editFormula,
@@ -186,6 +192,16 @@
       <span class="hidden text-xs text-surface-500 sm:inline">
         {totalSteps} step{totalSteps !== 1 ? "s" : ""}
       </span>
+
+      {#if map.topicName}
+        <span class="hidden items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-xs text-surface-300 md:inline-flex">
+          <svg class="h-3 w-3 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z" />
+            <line x1="7" y1="7" x2="7.01" y2="7" />
+          </svg>
+          {map.topicName}
+        </span>
+      {/if}
     </div>
 
     <div class="flex items-center gap-2">
@@ -256,6 +272,25 @@
               class="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-surface-200 outline-none transition-all placeholder:text-surface-600 focus:border-brand-500/40 focus:bg-brand-500/[0.04] focus:shadow-[0_0_0_1px_rgba(12,142,233,0.15)]"
               placeholder="Map title"
             />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="editTopic" class="text-xs font-medium text-surface-500">Topic</label>
+            <select
+              id="editTopic"
+              bind:value={editTopicId}
+              class="w-full rounded-lg border border-white/[0.08] bg-surface-900 px-3 py-2 text-sm text-surface-200 outline-none transition-all focus:border-brand-500/40"
+            >
+              {#if topicsQuery.isLoading}
+                <option value={editTopicId} class="bg-surface-900" disabled>Loading topics...</option>
+              {:else if topicsQuery.isError}
+                <option value={editTopicId} class="bg-surface-900" disabled>Couldn't load topics</option>
+              {:else}
+                {#each topicsQuery.data ?? [] as topic}
+                  <option value={topic.id} class="bg-surface-900">{topic.name}</option>
+                {/each}
+              {/if}
+            </select>
           </div>
 
           <div class="space-y-1.5">
@@ -592,6 +627,7 @@
           mapId={map.id}
           mapTitle={map.title}
           problemStatement={map.problemStatement}
+          topicName={map.topicName}
         />
       </div>
     </aside>
