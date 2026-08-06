@@ -21,6 +21,7 @@
     "@smart-step-mapper/env": "workspace:*",
     "@tanstack/svelte-query": "^6.1.36",
     "dotenv": "catalog:",
+    "katex": "^0.18.1",
     "zod": "catalog:"
   },
   "devDependencies": {
