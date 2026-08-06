@@ -4,6 +4,7 @@
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import AIChatPanel from "$lib/components/AIChatPanel.svelte";
+  import MathTex from "$lib/components/MathTex.svelte";
 
   // ── Route params ──
   const mapId = $derived($page.params.id ?? "");
@@ -499,6 +500,28 @@
 
       <!-- Steps Timeline -->
       <div class="flex-1 overflow-y-auto p-4 md:p-6">
+        {#if map.finalAnswer}
+          <div class="mx-auto mb-4 max-w-2xl overflow-hidden rounded-xl border border-emerald-500/25 bg-gradient-to-r from-emerald-500/15 via-emerald-500/10 to-brand-500/10">
+            <div class="flex items-center gap-3 px-4 py-3">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
+                <svg class="h-4 w-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              </span>
+              <div class="min-w-0">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400/80">Final Answer</p>
+                <p class="flex flex-wrap items-baseline gap-x-1.5 text-lg font-semibold text-emerald-200">
+                  <MathTex tex={map.finalAnswer} />
+                  {#if map.unit}
+                    <span class="text-base font-medium text-emerald-300/90">{map.unit}</span>
+                  {/if}
+                </p>
+              </div>
+            </div>
+          </div>
+        {/if}
+
         {#if totalSteps === 0}
           <!-- Empty state -->
           <div class="flex h-full flex-col items-center justify-center gap-4 text-center">
