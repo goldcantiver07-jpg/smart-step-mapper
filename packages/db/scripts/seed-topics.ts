@@ -1,10 +1,10 @@
 import { readFileSync } from "fs";
-import { resolve } from "path";
+import { fileURLToPath } from "url";
 
 async function main() {
   // Load env from apps/web/.env before importing env-dependent modules
   // Must use sync read + manual env set because ESM imports are hoisted
-  const envPath = resolve(import.meta.dir, "../../../apps/web/.env");
+  const envPath = fileURLToPath(new URL("../../../apps/web/.env", import.meta.url));
   const envContent = readFileSync(envPath, "utf-8");
   for (const line of envContent.split("\n")) {
     const trimmed = line.trim();
