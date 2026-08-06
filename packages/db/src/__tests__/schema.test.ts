@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import * as schema from "../schema";
-import { getTableName } from "drizzle-orm";
+import { getTableColumns, getTableName } from "drizzle-orm";
 
 describe("DB Schema", () => {
   it("exports users table", () => {
@@ -26,5 +26,21 @@ describe("DB Schema", () => {
   it("exports progress table", () => {
     expect(schema.progress).toBeDefined();
     expect(getTableName(schema.progress)).toBe("progress");
+  });
+
+  it("steps table has structured breakdown columns", () => {
+    const cols = getTableColumns(schema.steps);
+    expect(cols.formulaUsed).toBeDefined();
+    expect(cols.variablesUsed).toBeDefined();
+    expect(cols.substitution).toBeDefined();
+    expect(cols.calculation).toBeDefined();
+  });
+
+  it("maps table has unit, final answer, and method columns", () => {
+    const cols = getTableColumns(schema.maps);
+    expect(cols.unit).toBeDefined();
+    expect(cols.finalAnswer).toBeDefined();
+    expect(cols.method).toBeDefined();
+    expect(cols.alternativeMethods).toBeDefined();
   });
 });
