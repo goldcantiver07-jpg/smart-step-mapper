@@ -121,6 +121,7 @@ export const mapsRouter = {
         .from(maps)
         .where(eq(maps.id, existing.mapId))
         .limit(1);
+      if (!map) throw new Error("Map not found");
       if (map.userId !== context.user.id) throw new Error("Forbidden");
 
       const [updated] = await db

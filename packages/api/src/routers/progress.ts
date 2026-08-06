@@ -33,7 +33,7 @@ export const progressRouter = {
       .innerJoin(maps, eq(steps.mapId, maps.id))
       .where(eq(maps.userId, context.user.id));
 
-    const avg = stepStats[0]?.total > 0
+    const avg = (stepStats[0]?.total ?? 0) > 0
       ? Math.round(((stepStats[0]?.correct ?? 0) / (stepStats[0]?.total ?? 1)) * 100)
       : 0;
 

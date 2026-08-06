@@ -16,7 +16,7 @@ export const authRouter = {
         displayName: z.string().min(1).max(100),
       }),
     )
-    .handler(async ({ input, context }) => {
+    .handler(async ({ input }) => {
 const [existing] = await db
         .select({ id: users.id })
         .from(users)
@@ -38,6 +38,9 @@ const [existing] = await db
         })
         .returning({ id: users.id, email: users.email, displayName: users.displayName });
 
+      if (!user) {
+        throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Account creation failed." });
+      }
       const token = await signToken({ userId: user.id });
       return { user, token };
     }),
@@ -49,7 +52,7 @@ const [existing] = await db
         password: z.string().min(1),
       }),
     )
-    .handler(async ({ input, context }) => {
+    .handler(async ({ input }) => {
 const [found] = await db
         .select()
         .from(users)
@@ -118,6 +121,9 @@ const [found] = await db
         .from(users)
         .where(eq(users.id, context.user.id))
         .limit(1);
+      if (!found) {
+        throw new ORPCError("UNAUTHORIZED", { message: "Not authenticated" });
+      }
       const valid = await verifyPassword(input.currentPassword, found.passwordHash);
       if (!valid) {
         throw new ORPCError("UNAUTHORIZED", { message: "Current password is incorrect" });

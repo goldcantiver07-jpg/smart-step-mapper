@@ -32,6 +32,6 @@ export function verifyStepResult(expectedResult: string, userResult: string): St
   const errorType = classifyError(expectedResult, userResult);
   return {
     isCorrect: false,
-    feedback: FEEDBACK_MAP[errorType] ?? FEEDBACK_MAP.general,
+    feedback: FEEDBACK_MAP[errorType] ?? FEEDBACK_MAP.general ?? "Review your work step by step.",
   };
 }

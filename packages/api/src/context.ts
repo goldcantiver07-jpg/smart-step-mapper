@@ -1,4 +1,4 @@
-import { verifyToken, type JwtPayload } from "./utils/jwt";
+import { verifyToken } from "./utils/jwt";
 import { db } from "@smart-step-mapper/db";
 import { users } from "@smart-step-mapper/db/schema";
 import { eq } from "drizzle-orm";
