@@ -1,4 +1,5 @@
 import { callGroq, type MapContext } from "./chat";
+import { extractJsonObject } from "./json";
 
 export type SuggestedStep = {
   explanation: string;
@@ -19,6 +20,22 @@ export type VerifyStepResult = {
   suggestedStep: SuggestedStep | null;
   /** True when the LLM call failed or the response could not be parsed. */
   unavailable?: boolean;
+};
+
+/** Context for the stateless practice verifier (problem instead of a map). */
+export type ProblemVerifyContext = {
+  problemStatement: string;
+  topicName?: string;
+  formula?: string;
+  variables?: string;
+  unit?: string;
+  expectedSteps?: Array<{ stepNumber: number; explanation: string; result: string }>;
+};
+
+export type UserStepInput = {
+  explanation: string;
+  mathExpression: string;
+  result: string;
 };
 
 const VERIFIER_SYSTEM_PROMPT = `You are a step-verifier for "Smart Step Mapper", a math tutoring app. A student is solving a math problem one step at a time and has just added a new step to their step-by-step solution.
@@ -84,19 +101,11 @@ Respond with ONLY a JSON object.`;
 }
 
 export function parseVerifierVerdict(raw: string): VerifierVerdict | null {
-  const text = raw.trim();
-  if (!text) return null;
-
-  // Strip markdown code fences if the model wrapped the JSON.
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidate = fenced ? (fenced[1] ?? text) : text;
-
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) return null;
+  const json = extractJsonObject(raw);
+  if (!json) return null;
 
   try {
-    const parsed: unknown = JSON.parse(candidate.slice(start, end + 1));
+    const parsed: unknown = JSON.parse(json);
     if (typeof parsed !== "object" || parsed === null) return null;
     const record = parsed as Record<string, unknown>;
     if (record.verdict !== "correct" && record.verdict !== "incorrect") return null;
@@ -122,16 +131,13 @@ export function parseVerifierVerdict(raw: string): VerifierVerdict | null {
   }
 }
 
-export async function verifyStepWithAI(
-  mapContext: MapContext,
-  stepNumber: number,
-  mode: "auto" | "alternative" = "auto",
-): Promise<VerifyStepResult> {
+/** Shared runner: sends the user prompt to Groq and maps the verdict result. */
+async function runStepVerifier(userPrompt: string): Promise<VerifyStepResult> {
   try {
     const raw = await callGroq(
       [
         { role: "system", content: VERIFIER_SYSTEM_PROMPT },
-        { role: "user", content: buildVerifierPrompt(mapContext, stepNumber, mode) },
+        { role: "user", content: userPrompt },
       ],
       { temperature: 0.2, maxTokens: 512, timeoutMs: 15_000 },
     );
@@ -149,4 +155,71 @@ export async function verifyStepWithAI(
   } catch {
     return { isCorrect: false, feedback: "", suggestedStep: null, unavailable: true };
   }
+}
+
+export async function verifyStepWithAI(
+  mapContext: MapContext,
+  stepNumber: number,
+  mode: "auto" | "alternative" = "auto",
+): Promise<VerifyStepResult> {
+  return runStepVerifier(buildVerifierPrompt(mapContext, stepNumber, mode));
+}
+
+/** Build the verifier prompt for a stateless practice problem (no map). */
+export function buildContextVerifierPrompt(
+  context: ProblemVerifyContext,
+  previouslyEnteredSteps: UserStepInput[],
+  newStep: UserStepInput,
+): string {
+  const expectedSummary = (context.expectedSteps ?? [])
+    .map(
+      (s) =>
+        `Step ${s.stepNumber}: ${s.explanation || "(no explanation)"}${s.result ? ` → Result: ${s.result}` : ""}`,
+    )
+    .join("\n");
+
+  const priorSummary = previouslyEnteredSteps
+    .map(
+      (s, i) =>
+        `Step ${i + 1}: ${s.explanation || "(no explanation)"}${
+          s.mathExpression ? ` [Math: ${s.mathExpression}]` : ""
+        }${s.result ? ` → Result: ${s.result}` : ""}`,
+    )
+    .join("\n");
+
+  const stepNumber = previouslyEnteredSteps.length + 1;
+  const newSummary = `Step ${stepNumber}: ${newStep.explanation || "(no explanation)"}${
+    newStep.mathExpression ? ` [Math: ${newStep.mathExpression}]` : ""
+  }${newStep.result ? ` → Result: ${newStep.result}` : ""}`;
+
+  return `## Problem
+${context.topicName ? `Topic: ${context.topicName}` : ""}
+Problem Statement: ${context.problemStatement}
+${context.formula ? `Formula: ${context.formula}` : ""}
+${context.variables ? `Variables: ${context.variables}` : ""}
+${context.unit ? `Answer unit: ${context.unit}` : ""}
+
+## Reference solution (expected path — the student may use any valid alternative)
+${expectedSummary || "(none)"}
+
+## Previously entered steps (in order)
+${priorSummary || "(none)"}
+
+## New step to verify
+${newSummary}
+Respond with ONLY a JSON object.`;
+}
+
+/**
+ * Stateless practice verifier: verifies a single user-entered step against a
+ * problem context (plus the expected solution as a reference path) instead of
+ * a persisted map. Reuses the same system prompt and JSON contract as the
+ * map-backed verifier.
+ */
+export async function verifyStepWithContext(
+  context: ProblemVerifyContext,
+  previouslyEnteredSteps: UserStepInput[],
+  newStep: UserStepInput,
+): Promise<VerifyStepResult> {
+  return runStepVerifier(buildContextVerifierPrompt(context, previouslyEnteredSteps, newStep));
 }
