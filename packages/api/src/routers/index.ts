@@ -6,6 +6,7 @@ import { topicsRouter } from "./topics";
 import { mapsRouter } from "./maps";
 import { progressRouter } from "./progress";
 import { chatRouter } from "./chat";
+import { solveRouter } from "./solve";
 
 export const appRouter = {
   healthCheck: publicProcedure.handler(() => "OK"),
@@ -14,6 +15,7 @@ export const appRouter = {
   maps: mapsRouter,
   progress: progressRouter,
   chat: chatRouter,
+  solve: solveRouter,
 };
 
 export type AppRouter = typeof appRouter;
